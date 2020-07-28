@@ -1,0 +1,59 @@
+
+        ;代码清单6-1
+        ;文件名:ch6_test
+        ;文件说明：硬盘主引导扇区代码
+        ;创建日期：  2020-7-25 21:46
+         jmp near start  ;转移到后面的start标号处执行
+
+  mytext db 'L',0x07,'a',0x07,'b',0x07,'e',0x07,'l',0x07,' ',0x07,'o',0x07,\
+            'f',0x07,'f',0x07,'s',0x07,'e',0x07,'t',0x07,':',0x07      ;声明显示内容
+
+         jmp near start   ;   转移到后面start标号处执行
+
+  number db 0,0,0,0,0;number存显示地址
+  start:
+        mov ax,0x7c0;   设置数据段地址，主引导扇区的初始地址
+        mov ds,ax;
+
+        mov ax,0xb800       ;设置附加段基地址，，显示的基址
+        mov es,ax
+
+        cld                   ;方向标志指令清零，表示传送是正方向的
+        mov si,mytext           ;设置串源首地址到si
+        mov di,0                 ;目的首地址
+        mov cx,(number-mytext)/2   ;实际上等于13  传送字数
+        rep movsw          ;每次传送一个字，执行一次cx减1，当cx为0时停止
+
+        ;得到标号所代表的偏移地址
+        mov ax,number      ;要显示number所代表的地址
+
+        ;计算各个数位
+        mov bx,ax
+        mov cx,5           ;循环次数
+        mov si,10           ;除数
+  digit:
+       xor dx,dx         ;dx清零
+       div si
+       mov [bx],dl        ;保存数位     ，偏移地址来自寄存器
+       inc bx               ;将bx的内容加1
+       loop digit       ;循环指令 ：将cx的内容减1，如果cx的内容非零，转移到指定的位置执行 ，否则顺序执行后面的指令
+
+       ;显示各个数位
+       mov bx,number
+       mov si,4     ;首先显示万位的数字
+  show:
+       mov al,[bx+si]
+       add al,0x30  ;得到ASCII码
+       mov ah,0x04   ;红色字
+       mov [es:di],ax
+       add di,2        ;指向下一个单元
+       dec si      ;si减1  ，使其指向千位
+       jns show    ;条件转移指令  ：当 SF状态标志(符号标志)不为1时转移
+
+       mov word[es:di],0x744
+
+       jmp near $           ;死循环
+
+   times 510-($-$$) db 0
+                   db 0x55,0xaa
+
